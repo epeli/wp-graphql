@@ -465,6 +465,7 @@ class Router {
 		/**
 		 * Send the response
 		 */
+		do_action( 'graphql_return_json', $response );
 		wp_send_json( $response );
 
 	}
