@@ -366,7 +366,7 @@ class PostObjectConnectionResolver extends ConnectionResolver {
 		 * @since 0.0.5
 		 * @return array
 		 */
-		$query_args = apply_filters( 'graphql_map_input_fields_to_wp_query', $query_args, $args, $source, $all_args, $context, $info );
+		$query_args = apply_filters( 'graphql_map_input_fields_to_wp_query', $query_args, $args, self::$post_type, $source, $all_args, $context, $info );
 
 		/**
 		 * Return the Query Args
