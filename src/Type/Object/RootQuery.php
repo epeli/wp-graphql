@@ -182,6 +182,10 @@ if ( ! empty( $allowed_post_types ) && is_array( $allowed_post_types ) ) {
 			'uri'                                         => [
 				'type'        => 'String',
 				'description' => sprintf( __( 'Get the %s by its uri', 'wp-graphql' ), $post_type_object->graphql_single_name ),
+			],
+			'permalink'                                         => [
+				'type'        => 'String',
+				'description' => sprintf( __( 'Get the %s by its permalink', 'wp-graphql' ), $post_type_object->graphql_single_name ),
 			]
 		];
 
@@ -215,6 +219,9 @@ if ( ! empty( $allowed_post_types ) && is_array( $allowed_post_types ) ) {
 				} elseif ( ! empty( $args['slug'] ) ) {
 					$slug        = esc_html( $args['slug'] );
 					$post_object = DataSource::get_post_object_by_uri( $slug, 'OBJECT', $post_type_object->name );
+				} elseif ( ! empty( $args['permalink'] ) ) {
+					$permalink   = esc_html( $args['permalink'] );
+					$post_object = DataSource::get_post_object_by_permalink( $permalink, $post_type_object->name );
 				}
 
 				if ( empty( $post_object ) || is_wp_error( $post_object ) ) {
