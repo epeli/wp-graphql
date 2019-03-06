@@ -1261,6 +1261,73 @@ class PostObjectQueriesTest extends \Codeception\TestCase\WPTestCase {
 	}
 
 	/**
+	 * Make sure post_excerpt generation works
+	 */
+	public function testPostObjectExcerptFieldGeneration() {
+		/**
+		 * Create a posts that we can query via GraphQL.
+		 */
+		$graphql_query_post_id_a = $this->createPostObject( [
+			'post_title' => 'Title A',
+			'post_content' => 'Content A',
+			'post_excerpt' => ''
+		] );
+		$graphql_query_post_id_b = $this->createPostObject( [
+			'post_title' => 'Title B',
+			'post_content' => 'Content B',
+			'post_excerpt' => ''
+		] );
+
+
+		$graphql_query = "
+		{
+			posts {
+			  edges {
+				node {
+				  title
+				  excerpt
+				}
+			  }
+			}
+		}";
+
+		/**
+		 * Run the GraphQL query
+		 */
+		$graphql_query_data = do_graphql_request( $graphql_query );
+
+
+		$expected = [
+			'data' => [
+				'posts' => [
+					'edges' => [
+						[
+							'node' => [
+								'title' => 'Title B',
+								'excerpt' => "<p>Content B</p>\n",
+							]
+						],
+						[
+							'node' => [
+								'title' => 'Title A',
+								'excerpt' => "<p>Content A</p>\n",
+							]
+						],
+					]
+				],
+			],
+		];
+
+		/**
+		 * Assert that the filters were called.
+		 */
+		// $this->assertEquals( 'Content A', $graphql_query_data['data']['posts']['edges'][0]['node']['excerpt'] );
+		// $this->assertEquals( 'Content B', $graphql_query_data['data']['posts']['edges'][1]['node']['excerpt'] );
+		$this->assertEquals( $expected, $graphql_query_data );
+
+	}
+
+	/**
 	 * testPostQueryPostDataSetup
 	 *
 	 * This tests that we correctly setup post data for field resolvers.
