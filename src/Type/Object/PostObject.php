@@ -262,6 +262,9 @@ function get_post_object_fields( $post_type_object ) {
 					return $excerpt;
 				}
 
+				$GLOBALS['post'] = $post;
+				setup_postdata( $post );
+
 				$excerpt = apply_filters( 'get_the_excerpt', $excerpt, $post );
 
 				return apply_filters( 'the_excerpt', $excerpt );
