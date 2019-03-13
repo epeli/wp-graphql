@@ -756,26 +756,31 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 
 	}
 
-	public function testPostOrderingByMetaKey() {
+	private function formatNumber($num) {
+		return sprintf('%08d', $num);
+	}
 
+	public function testPostOrderingByStringMetaKey() {
+
+		// Add post meta to created posts
 		foreach ($this->created_post_ids as $index => $post_id) {
-			update_post_meta($post_id, 'test_meta', $index);
+			update_post_meta($post_id, 'test_meta', $this->formatNumber( $index ) );
 		}
 
-		update_post_meta($this->created_post_ids[3], 'test_meta', 100);
-		update_post_meta($this->created_post_ids[19], 'test_meta', 100);
+		// Move number 19 to the second page when ordering by test_meta
+		update_post_meta($this->created_post_ids[19], 'test_meta', $this->formatNumber( 6 ) );
 
-
-		tests_add_filter( 'graphql_map_input_fields_to_wp_query', function( $query_args ) {
-			error_log("MY FILTER");
+		add_filter( 'graphql_map_input_fields_to_wp_query', function( $query_args ) {
 			$query_args['orderby'] = [ 'meta_value' => 'ASC', ];
 			$query_args['meta_key'] = 'test_meta';
 			return $query_args;
 		}, 10, 1 );
 
-		$query = '
-		query getPosts($cursor: String) {
-			posts(after: $cursor, first: 5) {
+		// Must use dummy where args here to force
+		// graphql_map_input_fields_to_wp_query to be executes
+		$query = "
+		query getPosts(\$cursor: String) {
+			posts(after: \$cursor, first: 5, where: {author: {$this->admin}}) {
 			  pageInfo {
 				endCursor
 			  }
@@ -786,25 +791,20 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 			  }
 			}
 		  }
-		';
+		";
 
 		$first = do_graphql_request( $query, 'getPosts', [ 'cursor' => '' ] );
-
-		$first_titles = array_map( function( $edge ) {
-			return $edge['node']['title'];
-		}, $first['data']['posts']['edges']);
-		error_log("First " . print_r($first_titles, true));
-
 		$cursor = $first['data']['posts']['pageInfo']['endCursor'];
-
-
 		$second = do_graphql_request( $query, 'getPosts', [ 'cursor' => $cursor ] );
 
-		$titles = array_map( function( $edge ) {
+		$actual = array_map( function( $edge ) {
 			return $edge['node']['title'];
 		}, $second['data']['posts']['edges']);
 
-		error_log("Second " . print_r($titles, true));
+		// Note the 19 here
+		$expected = [ 5, 6, 19, 7, 8 ];
+
+		$this->assertEquals( $expected, $actual );
 	}
 
 }
