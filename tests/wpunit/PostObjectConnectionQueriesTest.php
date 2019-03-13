@@ -755,5 +755,56 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 		$this->assertNotEquals( $edges[0]['node']['content'], $edges[1]['node']['content'] );
 
 	}
-	
+
+	public function testPostOrderingByMetaKey() {
+
+		foreach ($this->created_post_ids as $index => $post_id) {
+			update_post_meta($post_id, 'test_meta', $index);
+		}
+
+		update_post_meta($this->created_post_ids[3], 'test_meta', 100);
+		update_post_meta($this->created_post_ids[19], 'test_meta', 100);
+
+
+		tests_add_filter( 'graphql_map_input_fields_to_wp_query', function( $query_args ) {
+			error_log("MY FILTER");
+			$query_args['orderby'] = [ 'meta_value' => 'ASC', ];
+			$query_args['meta_key'] = 'test_meta';
+			return $query_args;
+		}, 10, 1 );
+
+		$query = '
+		query getPosts($cursor: String) {
+			posts(after: $cursor, first: 5) {
+			  pageInfo {
+				endCursor
+			  }
+			  edges {
+				node {
+				  title
+				}
+			  }
+			}
+		  }
+		';
+
+		$first = do_graphql_request( $query, 'getPosts', [ 'cursor' => '' ] );
+
+		$first_titles = array_map( function( $edge ) {
+			return $edge['node']['title'];
+		}, $first['data']['posts']['edges']);
+		error_log("First " . print_r($first_titles, true));
+
+		$cursor = $first['data']['posts']['pageInfo']['endCursor'];
+
+
+		$second = do_graphql_request( $query, 'getPosts', [ 'cursor' => $cursor ] );
+
+		$titles = array_map( function( $edge ) {
+			return $edge['node']['title'];
+		}, $second['data']['posts']['edges']);
+
+		error_log("Second " . print_r($titles, true));
+	}
+
 }
