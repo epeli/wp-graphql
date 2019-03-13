@@ -802,7 +802,7 @@ class PostObjectConnectionQueriesTest extends \Codeception\TestCase\WPTestCase {
 		}, $second['data']['posts']['edges']);
 
 		// Note the 19 here
-		$expected = [ 5, 6, 19, 7, 8 ];
+		$expected = [ 6, 19, 7, 8, 9 ];
 
 		$this->assertEquals( $expected, $actual );
 	}
