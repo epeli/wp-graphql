@@ -338,4 +338,37 @@ class PostObjectsMetaQueryTest extends \Codeception\TestCase\WPTestCase {
 		] );
 
 	}
+
+	public function testPostOrderingByMultipleQueryClause() {
+
+		foreach ($this->created_post_ids as $index => $post_id) {
+			update_post_meta($post_id, 'test_meta1', $this->formatNumber( 10 ) );
+		}
+
+		foreach ($this->created_post_ids as $index => $post_id) {
+			update_post_meta($post_id, 'test_meta2', $this->formatNumber( $index ) );
+		}
+
+		// Move number 19 to the second page when ordering by test_meta
+		$this->deleteByMetaKey( 'test_meta2', $this->formatNumber( 7 ) );
+		update_post_meta($this->created_post_ids[19], 'test_meta2', $this->formatNumber( 7 ) );
+
+		$this->assertMetaQuery( [
+			'orderby' => [
+				'test_clause1' => 'ASC',
+				'test_clause2' => 'ASC',
+			],
+			'meta_query' => [
+				'test_clause1' => [
+					'key' => 'test_meta1',
+					'compare' => 'EXISTS',
+				],
+				'test_clause2' => [
+					'key' => 'test_meta2',
+					'compare' => 'EXISTS',
+				]
+			]
+		] );
+
+	}
 }

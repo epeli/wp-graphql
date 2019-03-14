@@ -102,12 +102,14 @@ class Config {
 				if ( ! empty( $cursor_post ) && ! empty( $cursor_post->post_date ) ) {
 					$orderby = $query->get( 'orderby' );
 					if ( ! empty( $orderby ) && is_array( $orderby ) ) {
+						$meta_num = 0;
 						foreach ( $orderby as $by => $order ) {
 							$order_compare = ( 'ASC' === $order ) ? '>' : '<';
 							$value = $cursor_post->{$by};
 							$meta_key =  $this->get_meta_key( $by, $query );
 							if ( $meta_key ) {
-								$where .= $this->add_meta_query_and_operator( $meta_key, $where, $cursor_offset, $order_compare, $query );
+								$where .= $this->add_meta_query_and_operator( $meta_key, $meta_num, $where, $cursor_offset, $order_compare, $query );
+								$meta_num++;
 							} else if ( ! empty( $by ) && ! empty( $value ) ) {
 								$where .= $wpdb->prepare( " AND {$wpdb->posts}.{$by} {$order_compare} %s", $value );
 							}
@@ -153,28 +155,37 @@ class Config {
 	 *
 	 * @return string
 	 */
-	private function add_meta_query_and_operator( $meta_key, $where, $cursor_offset, $order_compare, \WP_Query $query ) {
+	private function add_meta_query_and_operator( $meta_key, $meta_num, $where, $cursor_offset, $order_compare, \WP_Query $query ) {
 		global $wpdb;
 
 		$meta_type = ! empty( $query->query_vars["meta_type"] ) ? esc_sql( $query->query_vars["meta_type"] ) : null;
 		$meta_value = esc_sql( get_post_meta( $cursor_offset, $meta_key, true ) );
 
 		$compare_right = '%s';
-		$compare_left = "{$wpdb->postmeta}.meta_value";
+		$table_alias = $wpdb->postmeta;
+
+		if ( $meta_num > 0 ) {
+			$table_alias = "mt{$meta_num}";
+		}
+
+		$compare_left = "{$table_alias}.meta_value";
+
 
 		if ( $meta_type ) {
 			$meta_type = $this->get_cast_for_type( $meta_type );
-			$compare_left = "CAST({$wpdb->postmeta}.meta_value AS $meta_type)";
+			$compare_left = "CAST({$table_alias}.meta_value AS $meta_type)";
 			$compare_right = "CAST(%s AS $meta_type)";
 		}
 
-		$where .= $wpdb->prepare(
-			" AND {$wpdb->postmeta}.meta_key = %s AND $compare_left {$order_compare} $compare_right ",
+		$add = $wpdb->prepare(
+			" AND ({$table_alias}.meta_key = %s AND $compare_left {$order_compare} $compare_right) ",
 			$meta_key,
 			$meta_value
 		);
 
-		return $where;
+		error_log("\n\n ADDED: $add \n\n");
+
+		return $where . $add;
 	}
 
 	/**
