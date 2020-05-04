@@ -10,6 +10,17 @@ use WPGraphQL\AppContext;
 use WPGraphQL\Type\WPObjectType;
 
 /**
+ * Create unique custom "nil" value which is different from the build-in PHP
+ * null, false etc. When this custom "nil" is returned from a filter we can
+ * know that the filter did not try to return anything custom because it does
+ * not equal with anything but itself.
+ *
+ * Exposing this as a global so it can be accessed even if other overloaded
+ * filters return something else.
+ */
+$graphql_nil = new \stdClass();
+
+/**
  * Class InstrumentSchema
  *
  * @package WPGraphQL\Data
@@ -141,19 +152,14 @@ class InstrumentSchema {
 						 */
 						do_action( 'graphql_before_resolve_field', $source, $args, $context, $info, $field_resolver, $type_name, $field_key, $field );
 
-						/**
-						 * Create unique custom "nil" value which is different from the build-in PHP null, false etc.
-						 * When this custom "nil" is returned we can know that the filter did not try to preresolve
-						 * the field because it does not equal with anything but itself.
-						 */
-						$nil = new \stdClass();
+						global $graphql_nil;
 
 						/**
-						 * When this filter return anything other than the $nil it will be used as the resolved value
+						 * When this filter returns anything other than the $graphql_nil it will be used as the resolved value
 						 * and the execution of the actual resolved is skipped. This filter can be used to implement
 						 * field level caches or for efficiently hiding data by returning null.
 						 *
-						 * @param mixed           $nil            Unique nil value
+						 * @param mixed           $graphql_nil    Unique nil value
 						 * @param mixed           $source         The source passed down the Resolve Tree
 						 * @param array           $args           The args for the field
 						 * @param AppContext      $context        The AppContext passed down the ResolveTree
@@ -163,12 +169,12 @@ class InstrumentSchema {
 						 * @param FieldDefinition $field          The Field Definition for the resolving field
 						 * @param mixed           $field_resolver The default field resolver
 						 */
-						$result = apply_filters( 'graphql_pre_resolve_field', $nil, $source, $args, $context, $info, $type_name, $field_key, $field, $field_resolver );
+						$result = apply_filters( 'graphql_pre_resolve_field', $graphql_nil, $source, $args, $context, $info, $type_name, $field_key, $field, $field_resolver );
 
 						/**
 						* Check if the field preresolved
 						*/
-						if ( $nil === $result ) {
+						if ( $graphql_nil === $result ) {
 							/**
 							 * If the current field doesn't have a resolve function, use the defaultFieldResolver,
 							 * otherwise use the $field_resolver
